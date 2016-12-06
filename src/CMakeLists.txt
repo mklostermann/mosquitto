@@ -30,6 +30,7 @@ set (MOSQ_SRCS
 	read_handle.c
 	../lib/read_handle.h
 	subs.c
+	plugin.c
 	security.c security_default.c
 	../lib/send_mosq.c ../lib/send_mosq.h
 	send_connack.c
@@ -55,6 +56,14 @@ if (${INC_BRIDGE_SUPPORT} STREQUAL ON)
 	set (MOSQ_SRCS ${MOSQ_SRCS} bridge.c)
 	add_definitions("-DWITH_BRIDGE")
 endif (${INC_BRIDGE_SUPPORT} STREQUAL ON)
+
+option(INC_KAFKA_BRIDGE_SUPPORT
+		"Include Kafka bridge support for connecting to Apache Kafka?" ON)
+if (${INC_KAFKA_BRIDGE_SUPPORT} STREQUAL ON)
+	set (MOSQ_SRCS ${MOSQ_SRCS} kafka_bridge.c)
+	set (MOSQ_LIBS ${MOSQ_LIBS} rdkafka)
+	add_definitions("-DWITH_KAFKA_BRIDGE")
+endif (${INC_KAFKA_BRIDGE_SUPPORT} STREQUAL ON)
 
 
 option(USE_LIBWRAP

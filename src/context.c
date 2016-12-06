@@ -52,6 +52,7 @@ struct mosquitto *context__init(struct mosquitto_db *db, mosq_sock_t sock)
 	 * done by looking at context->bridge for bridges that we create ourself,
 	 * but incoming bridges need some other way of being recorded. */
 	context->is_bridge = false;
+	context->is_kafka_bridge = false;
 
 	context->in_packet.payload = NULL;
 	packet__cleanup(&context->in_packet);
@@ -98,7 +99,6 @@ void context__cleanup(struct mosquitto_db *db, struct mosquitto *context, bool d
 {
 	struct mosquitto__packet *packet;
 	struct mosquitto_client_msg *msg, *next;
-	int i;
 
 	if(!context) return;
 
@@ -109,6 +109,7 @@ void context__cleanup(struct mosquitto_db *db, struct mosquitto *context, bool d
 	context->password = NULL;
 
 #ifdef WITH_BRIDGE
+	int i;
 	if(context->bridge){
 		for(i=0; i<db->bridge_count; i++){
 			if(db->bridges[i] == context){
@@ -132,6 +133,11 @@ void context__cleanup(struct mosquitto_db *db, struct mosquitto *context, bool d
 
 		mosquitto__free(context->bridge->remote_password);
 		context->bridge->remote_password = NULL;
+	}
+#endif
+#ifdef WITH_KAFKA_BRIDGE
+	if(context->kafka_bridge){
+		context->kafka_bridge = NULL;
 	}
 #endif
 	net__socket_close(db, context);

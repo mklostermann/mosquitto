@@ -261,6 +261,10 @@ struct mosquitto {
 	ares_channel achan;
 #  endif
 #endif
+#ifdef WITH_KAFKA_BRIDGE
+	bool is_kafka_bridge;
+	struct kafka__bridge *kafka_bridge;
+#endif
 
 #ifdef WITH_BROKER
 	UT_hash_handle hh_id;

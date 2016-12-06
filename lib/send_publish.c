@@ -47,6 +47,8 @@ int send__publish(struct mosquitto *mosq, uint16_t mid, const char *topic, uint3
 	bool match;
 	int rc;
 	char *mapped_topic = NULL;
+#endif
+#if defined(WITH_BRIDGE) || defined(WITH_KAFKA_BRIDGE)
 	char *topic_temp = NULL;
 #endif
 #endif
@@ -117,6 +119,32 @@ int send__publish(struct mosquitto *mosq, uint16_t mid, const char *topic, uint3
 				}
 			}
 		}
+	}
+#endif
+#ifdef WITH_KAFKA_BRIDGE
+	if(mosq->kafka_bridge){
+		topic_temp = mosquitto__strdup(topic);
+		if(!topic_temp) return MOSQ_ERR_NOMEM;
+		kafka_bridge__convert_topic_name(topic_temp);
+
+		// rdkafka will return the same handle if a topic name is reused
+		rd_kafka_topic_t *kafka_topic = rd_kafka_topic_new(mosq->kafka_bridge->producer, topic_temp, NULL);
+		if(!kafka_topic){
+			log__printf(NULL, MOSQ_LOG_ERR, "Error creating Kafka topic %s for Kafka bridge %s.", topic_temp, mosq->kafka_bridge->name);
+			return MOSQ_ERR_UNKNOWN;
+		}
+		if(rd_kafka_produce(kafka_topic, RD_KAFKA_PARTITION_UA, // TODO: what about these constants?
+							RD_KAFKA_MSG_F_COPY,
+							(void*)payload, payloadlen,
+							NULL, 0, // TODO: do I need a key? is this about consistent hashing?
+							NULL) == -1){
+			log__printf(NULL, MOSQ_LOG_ERR, "Error publishing message to Kafka topic %s for Kafka bridge %s.", topic_temp, mosq->kafka_bridge->name);
+			return MOSQ_ERR_UNKNOWN;
+		}
+		log__printf(NULL, MOSQ_LOG_DEBUG, "Sending Kafka PUBLISH to %s (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", mosq->id, dup, qos, retain, mid, topic_temp, (long)payloadlen);
+
+		mosquitto__free(topic_temp);
+		return MOSQ_ERR_SUCCESS;
 	}
 #endif
 	log__printf(NULL, MOSQ_LOG_DEBUG, "Sending PUBLISH to %s (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", mosq->id, dup, qos, retain, mid, topic, (long)payloadlen);
