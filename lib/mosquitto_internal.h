@@ -56,7 +56,7 @@ Contributors:
 #include "mosquitto.h"
 #include "time_mosq.h"
 #ifdef WITH_BROKER
-#  include "uthash.h"
+#include "uthash.h"
 struct mosquitto_client_msg;
 #endif
 
@@ -201,6 +201,7 @@ struct mosquitto {
 	bool is_dropping;
 	bool is_bridge;
 	struct mosquitto__bridge *bridge;
+	struct kafka__bridge *kafka_bridge;
 	struct mosquitto_client_msg *inflight_msgs;
 	struct mosquitto_client_msg *last_inflight_msg;
 	struct mosquitto_client_msg *queued_msgs;
@@ -260,10 +261,6 @@ struct mosquitto {
 #  ifdef WITH_SRV
 	ares_channel achan;
 #  endif
-#endif
-#ifdef WITH_KAFKA_BRIDGE
-	bool is_kafka_bridge;
-	struct kafka__bridge *kafka_bridge;
 #endif
 
 #ifdef WITH_BROKER

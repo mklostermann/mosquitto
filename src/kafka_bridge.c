@@ -15,37 +15,23 @@ Contributors:
 */
 
 #include <assert.h>
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
-
-#ifndef WIN32
-#include <netdb.h>
-#include <sys/socket.h>
-#else
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
 #include "config.h"
 
 #include "mosquitto.h"
 #include "mosquitto_broker_internal.h"
 #include "packet_mosq.h"
-#include "send_mosq.h"
-#include "time_mosq.h"
-#include "tls_mosq.h"
-#include "util_mosq.h"
-#include "will_mosq.h"
 #include "memory_mosq.h"
-// TODO: cleanup includes
+
 #ifdef WITH_KAFKA_BRIDGE
 
 #include <librdkafka/rdkafka.h>
 
 #define KAFKA_BRIDGE_ID_PREFIX "kafka_bridge"
 
-int kafka_bridge__new(struct mosquitto_db *db, struct kafka__bridge *kafka_bridge)
+int kafka_bridge__new(struct mosquitto_db *db, struct kafka__bridge *kafka_bridge, int num)
 {
 	struct mosquitto *new_context = NULL;
 
@@ -65,27 +51,27 @@ int kafka_bridge__new(struct mosquitto_db *db, struct kafka__bridge *kafka_bridg
 
 	HASH_ADD_KEYPTR(hh_id, db->contexts_by_id, new_context->id, strlen(new_context->id), new_context);
 	new_context->kafka_bridge = kafka_bridge;
-	new_context->is_kafka_bridge = true;
 	db->kafka_bridge_count++;
 
-	return kafka_bridge__connect(db, new_context);
+	return kafka_bridge__connect(db, new_context, num);
 }
 
-// Connects to the Kafka cluster. The underlying library takes care of reconnecting... // TODO: more details, coding convention for doc comments?
-int kafka_bridge__connect(struct mosquitto_db *db, struct mosquitto *context)
+/* Connects to Apache Kafka. The underlying library takes care of reconnecting after failure and much more. */
+int kafka_bridge__connect(struct mosquitto_db *db, struct mosquitto *context, int num)
 {
 	int i;
 	char errstr[512];
 
-	context->kafka_bridge->producer = rd_kafka_new(RD_KAFKA_PRODUCER, context->kafka_bridge->conf, errstr, sizeof(errstr));
+	// rd_kafka_new will destroy the conf object, so create a copy first
+	rd_kafka_conf_t *kafka_conf = rd_kafka_conf_dup(context->kafka_bridge->conf);
+	context->kafka_bridge->producer = rd_kafka_new(RD_KAFKA_PRODUCER, kafka_conf, errstr, sizeof(errstr));
 	if (!context->kafka_bridge->producer){
 		log__printf(NULL, MOSQ_LOG_ERR, "Error: Could not create Kafka producer: %s", errstr);
 		return MOSQ_ERR_UNKNOWN;
 	}
 
-	context->kafka_bridge->conf = NULL; // config was freed by rd_kafka_new
 	context->state = mosq_cs_connected;
-	context->sock = -2; // TODO: define UNUSED, does this work with the rest of the code (disconnect...)?
+	context->sock = -2 - num; // fake fd
 	context->keepalive = 0;
 	HASH_ADD(hh_sock, db->contexts_by_sock, sock, sizeof(context->sock), context);
 
@@ -93,13 +79,13 @@ int kafka_bridge__connect(struct mosquitto_db *db, struct mosquitto *context)
 	sub__clean_session(db, context);
 	for(i=0; i<context->kafka_bridge->topic_count; i++){
 		log__printf(NULL, MOSQ_LOG_DEBUG, "Kafka bridge %s doing local SUBSCRIBE on topic %s", context->id, context->kafka_bridge->topics[i]);
-		if(sub__add(db, context, context->kafka_bridge->topics[i], 2, &db->subs)) return 1; // TODO: QOS from config?
+		if(sub__add(db, context, context->kafka_bridge->topics[i], 2, &db->subs)) return 1;
 	}
 
 	return MOSQ_ERR_SUCCESS;
 }
 
-// replace chars not allowed in Kafka topic names (allowed: [a-zA-Z0-9/_\-]{1,249})
+/* Replace characters not allowed in Kafka topic names (allowed: [a-zA-Z0-9/_\-]). */
 void kafka_bridge__convert_topic_name(char* mqtt_topic){
 	char* ch = mqtt_topic;
 	do{

@@ -131,14 +131,18 @@ int send__publish(struct mosquitto *mosq, uint16_t mid, const char *topic, uint3
 		rd_kafka_topic_t *kafka_topic = rd_kafka_topic_new(mosq->kafka_bridge->producer, topic_temp, NULL);
 		if(!kafka_topic){
 			log__printf(NULL, MOSQ_LOG_ERR, "Error creating Kafka topic %s for Kafka bridge %s.", topic_temp, mosq->kafka_bridge->name);
+
+			mosquitto__free(topic_temp);
 			return MOSQ_ERR_UNKNOWN;
 		}
-		if(rd_kafka_produce(kafka_topic, RD_KAFKA_PARTITION_UA, // TODO: what about these constants?
+		if(rd_kafka_produce(kafka_topic, RD_KAFKA_PARTITION_UA,
 							RD_KAFKA_MSG_F_COPY,
 							(void*)payload, payloadlen,
-							NULL, 0, // TODO: do I need a key? is this about consistent hashing?
+							NULL, 0,
 							NULL) == -1){
 			log__printf(NULL, MOSQ_LOG_ERR, "Error publishing message to Kafka topic %s for Kafka bridge %s.", topic_temp, mosq->kafka_bridge->name);
+
+			mosquitto__free(topic_temp);
 			return MOSQ_ERR_UNKNOWN;
 		}
 		log__printf(NULL, MOSQ_LOG_DEBUG, "Sending Kafka PUBLISH to %s (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", mosq->id, dup, qos, retain, mid, topic_temp, (long)payloadlen);

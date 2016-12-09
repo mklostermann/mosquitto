@@ -354,7 +354,7 @@ int main(int argc, char *argv[])
 
 #ifdef WITH_KAFKA_BRIDGE
 	for(i=0; i<config.kafka_bridge_count; i++){
-		if(kafka_bridge__new(&int_db, &(config.kafka_bridges[i]))){
+		if(kafka_bridge__new(&int_db, &(config.kafka_bridges[i]), i)){
 			log__printf(NULL, MOSQ_LOG_WARNING, "Warning: Unable to connect to Kafka bridge %s.",
 						config.kafka_bridges[i].name);
 		}
@@ -389,15 +389,13 @@ int main(int argc, char *argv[])
 
 	HASH_ITER(hh_id, int_db.contexts_by_id, ctxt, ctxt_tmp){
 #ifdef WITH_WEBSOCKETS
-		if(!ctxt->wsi){
-			context__cleanup(&int_db, ctxt, true);
-		}
-#elif defined WITH_KAFKA_BRIDGE
-		if(!ctxt->is_kafka_bridge){
+		if(!ctxt->wsi && !ctxt->kafka_bridge){
 			context__cleanup(&int_db, ctxt, true);
 		}
 #else
-		context__cleanup(&int_db, ctxt, true);
+		if(!ctxt->kafka_bridge){
+			context__cleanup(&int_db, ctxt, true);
+		}
 #endif
 	}
 	HASH_ITER(hh_sock, int_db.contexts_by_sock, ctxt, ctxt_tmp){

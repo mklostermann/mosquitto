@@ -190,6 +190,7 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 					}
 				}
 #endif
+
 				/* Local bridges never time out in this fashion. */
 				if(!(context->keepalive)
 						|| context->bridge
@@ -421,7 +422,6 @@ void do_disconnect(struct mosquitto_db *db, struct mosquitto *context)
 #else
 		if(context->clean_session){
 #endif
-			// TODO: Kafka disconnect? Consider caveats: https://github.com/edenhill/librdkafka/wiki/Proper-termination-sequence
 			context__add_to_disused(db, context);
 			if(context->id){
 				HASH_DELETE(hh_id, db->contexts_by_id, context);

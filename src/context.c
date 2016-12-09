@@ -52,7 +52,6 @@ struct mosquitto *context__init(struct mosquitto_db *db, mosq_sock_t sock)
 	 * done by looking at context->bridge for bridges that we create ourself,
 	 * but incoming bridges need some other way of being recorded. */
 	context->is_bridge = false;
-	context->is_kafka_bridge = false;
 
 	context->in_packet.payload = NULL;
 	packet__cleanup(&context->in_packet);
@@ -71,6 +70,7 @@ struct mosquitto *context__init(struct mosquitto_db *db, mosq_sock_t sock)
 		}
 	}
 	context->bridge = NULL;
+	context->kafka_bridge = NULL;
 	context->inflight_msgs = NULL;
 	context->last_inflight_msg = NULL;
 	context->queued_msgs = NULL;
@@ -137,7 +137,17 @@ void context__cleanup(struct mosquitto_db *db, struct mosquitto *context, bool d
 #endif
 #ifdef WITH_KAFKA_BRIDGE
 	if(context->kafka_bridge){
+		if(context->kafka_bridge->producer){
+			log__printf(NULL, MOSQ_LOG_DEBUG, "Destroying Kafka bridge connection %s.", context->id);
+			// make sure all messages are sent before destroying the Kafka handles
+			while (rd_kafka_outq_len(context->kafka_bridge->producer) > 0){
+				rd_kafka_poll(context->kafka_bridge->producer, 50);
+			}
+			rd_kafka_destroy(context->kafka_bridge->producer);
+		}
 		context->kafka_bridge = NULL;
+		HASH_DELETE(hh_sock, db->contexts_by_sock, context);
+		context->sock = INVALID_SOCKET;
 	}
 #endif
 	net__socket_close(db, context);

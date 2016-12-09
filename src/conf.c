@@ -314,12 +314,7 @@ void config__cleanup(struct mosquitto__config *config)
 				}
 				mosquitto__free(config->kafka_bridges[i].topics);
 			}
-			if(config->kafka_bridges[i].conf){
-				rd_kafka_conf_destroy(config->kafka_bridges[i].conf);
-			}
-			if(config->kafka_bridges[i].producer){
-				rd_kafka_destroy(config->kafka_bridges[i].producer);
-			}
+			rd_kafka_conf_destroy(config->kafka_bridges[i].conf);
 		}
 		mosquitto__free(config->kafka_bridges);
 	}
@@ -1140,7 +1135,7 @@ int config__read_file_core(struct mosquitto__config *config, bool reload, const 
 					token = strtok_r(NULL, " ", &saveptr);
 					token2 = strtok_r(NULL, " ", &saveptr);
 					if (token && token2){
-						if (rd_kafka_conf_set(cur_kafka_bridge->conf, "metadata.broker.list", "localhost:9092",
+						if (rd_kafka_conf_set(cur_kafka_bridge->conf, token, token2,
 											  errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK){
 							log__printf(NULL, MOSQ_LOG_ERR, "Error: Wrong Kafka configuration: %s", errstr);
 							return MOSQ_ERR_INVAL;

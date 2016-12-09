@@ -359,16 +359,14 @@ struct mosquitto_db{
 	struct mosquitto *contexts_for_free;
 #ifdef WITH_BRIDGE
 	struct mosquitto **bridges;
-#endif
-	struct clientid__index_hash *clientid_index_hash;
-	struct mosquitto_msg_store *msg_store;
-	struct mosquitto_msg_store_load *msg_store_load;
-#ifdef WITH_BRIDGE
 	int bridge_count;
 #endif
 #ifdef WITH_KAFKA_BRIDGE
 	int kafka_bridge_count;
 #endif
+	struct clientid__index_hash *clientid_index_hash;
+	struct mosquitto_msg_store *msg_store;
+	struct mosquitto_msg_store_load *msg_store_load;
 	unsigned long msg_store_bytes;
 	int msg_store_count;
 	struct mosquitto__config *config;
@@ -593,8 +591,8 @@ void bridge__packet_cleanup(struct mosquitto *context);
 #endif
 
 #ifdef WITH_KAFKA_BRIDGE
-int kafka_bridge__new(struct mosquitto_db *db, struct kafka__bridge *bridge);
-int kafka_bridge__connect(struct mosquitto_db *db, struct mosquitto *context);
+int kafka_bridge__new(struct mosquitto_db *db, struct kafka__bridge *bridge, int num);
+int kafka_bridge__connect(struct mosquitto_db *db, struct mosquitto *context, int num);
 void kafka_bridge__convert_topic_name(char* mqtt_topic);
 #endif
 

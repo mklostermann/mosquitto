@@ -9,7 +9,7 @@ cmd_subfolder = os.path.realpath(os.path.abspath(os.path.join(os.path.split(insp
 if cmd_subfolder not in sys.path:
     sys.path.insert(0, cmd_subfolder)
 
-import mosq_test
+import mosq_test, logging
 from kafka import KafkaConsumer
 
 rc = 1
@@ -20,21 +20,29 @@ publish_packet = mosq_test.gen_publish("test/kafka", qos=0, payload="kafka test 
 
 broker = mosq_test.start_broker(filename=os.path.basename(__file__))
 
+# create a Kafka consumer
+logging.getLogger('kafka').addHandler(logging.NullHandler())
+consumer = KafkaConsumer(bootstrap_servers="localhost:9092")
+consumer.subscribe(pattern=".*")
+
 try:
     sock = mosq_test.do_client_connect(connect_packet, connack_packet)
     sock.send(publish_packet)
     sock.close()
-    consumer = KafkaConsumer('test.kafka', metadata_broker_list='localhost:9092')
-    msg = next(consumer)
-    print msg
-    if msg.value == "kafka test message":
-        rc = 0
+    rc = 0
 finally:
     broker.terminate()
     broker.wait()
     if rc:
         (stdo, stde) = broker.communicate()
         print(stde)
+
+# validate message sent to Kafka
+msg = next(consumer)
+consumer.close()
+if msg.value != "kafka test message" or msg.topic != "test.kafka":
+    print "Test message was not correctly transmitted to Kafka consumer, received: {0}".format(msg)
+    rc = 1
 
 exit(rc)
 
