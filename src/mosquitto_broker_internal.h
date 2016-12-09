@@ -460,7 +460,6 @@ struct kafka__bridge {
 
 	rd_kafka_conf_t *conf;
 	rd_kafka_t *producer;
-	rd_kafka_topic_t *topic;
 };
 
 #ifdef WITH_WEBSOCKETS

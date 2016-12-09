@@ -135,6 +135,7 @@ int send__publish(struct mosquitto *mosq, uint16_t mid, const char *topic, uint3
 			mosquitto__free(topic_temp);
 			return MOSQ_ERR_UNKNOWN;
 		}
+		log__printf(NULL, MOSQ_LOG_DEBUG, "Sending Kafka PUBLISH to %s (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", mosq->id, dup, qos, retain, mid, topic_temp, (long)payloadlen);
 		if(rd_kafka_produce(kafka_topic, RD_KAFKA_PARTITION_UA,
 							RD_KAFKA_MSG_F_COPY,
 							(void*)payload, payloadlen,
@@ -145,9 +146,8 @@ int send__publish(struct mosquitto *mosq, uint16_t mid, const char *topic, uint3
 			mosquitto__free(topic_temp);
 			return MOSQ_ERR_UNKNOWN;
 		}
-		log__printf(NULL, MOSQ_LOG_DEBUG, "Sending Kafka PUBLISH to %s (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", mosq->id, dup, qos, retain, mid, topic_temp, (long)payloadlen);
-
 		mosquitto__free(topic_temp);
+
 		return MOSQ_ERR_SUCCESS;
 	}
 #endif

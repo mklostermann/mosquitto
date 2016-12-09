@@ -79,7 +79,7 @@ int kafka_bridge__connect(struct mosquitto_db *db, struct mosquitto *context, in
 	sub__clean_session(db, context);
 	for(i=0; i<context->kafka_bridge->topic_count; i++){
 		log__printf(NULL, MOSQ_LOG_DEBUG, "Kafka bridge %s doing local SUBSCRIBE on topic %s", context->id, context->kafka_bridge->topics[i]);
-		if(sub__add(db, context, context->kafka_bridge->topics[i], 2, &db->subs)) return 1;
+		if(sub__add(db, context, context->kafka_bridge->topics[i], 0, &db->subs)) return 1;
 	}
 
 	return MOSQ_ERR_SUCCESS;
