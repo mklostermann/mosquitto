@@ -22,7 +22,7 @@ broker = mosq_test.start_broker(filename=os.path.basename(__file__))
 
 # create a Kafka consumer
 logging.getLogger('kafka').addHandler(logging.NullHandler())
-consumer = KafkaConsumer(bootstrap_servers="localhost:9092")
+consumer = KafkaConsumer(bootstrap_servers="localhost:9092", consumer_timeout_ms=10)
 consumer.subscribe(pattern=".*")
 
 try:
@@ -38,10 +38,10 @@ finally:
         print(stde)
 
 # validate message sent to Kafka
-msg = next(consumer)
+message = next(consumer)
 consumer.close()
-if msg.value != "kafka test message" or msg.topic != "test.kafka":
-    print "Test message was not correctly transmitted to Kafka consumer, received: {0}".format(msg)
+if message.value != "kafka test message" or message.topic != "test.kafka":
+    print "Test message was not correctly transmitted to Kafka consumer, received: {0}".format(message)
     rc = 1
 
 exit(rc)
